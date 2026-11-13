@@ -14,7 +14,7 @@ delete from public.profiles;
 delete from public.camps;
 delete from public.user_roles;
 
--- 1. RELIEF CAMPS (Consistent UUIDs)
+-- 1. RELIEF CAMPS
 insert into public.camps (id, name, lat, lng, capacity, current_count, location_desc) values
 (
   '77777777-1111-1111-1111-111111111111',
@@ -77,24 +77,24 @@ insert into public.profiles (id, name, photo_url, blood_group, allergies, condit
   'Severe allergy! Requires Epipen immediately if swollen or wheezing.'
 );
 
--- 3. RESTRICTED MEDICAL RECORDS (Confidential - Unlocked by Verified Hospital/Paramedics)
+-- 3. RESTRICTED MEDICAL RECORDS (Strict RFC 4122 Hexadecimal UUIDs)
 insert into public.medical_records (id, profile_id, medical_full, medications, doctor_notes) values
 (
-  'm1111111-1111-1111-1111-111111111111',
+  'e1111111-1111-1111-1111-111111111111',
   'a1111111-1111-1111-1111-111111111111',
   'Restricted Medical Record: Prior orthopedic surgery (right collarbone, 2022). Asthmatic attacks triggered by severe dust or smoke inhalation. Inhaler dosage: Salbutamol 100mcg.',
   array['Salbutamol 100mcg', 'Montelukast 10mg'],
   'Dr. Neha Kulkarni, Apex Trauma Center'
 ),
 (
-  'm2222222-2222-2222-2222-222222222222',
+  'e2222222-2222-2222-2222-222222222222',
   'b2222222-2222-2222-2222-222222222222',
   'Restricted Medical Record: Daily medication: Metformin 500mg, Donepezil 5mg. Prone to hypoglycemic episodes if meals are delayed.',
   array['Metformin 500mg', 'Donepezil 5mg'],
   'Dr. A. Sen, Geriatric Care Institute'
 ),
 (
-  'm3333333-3333-3333-3333-333333333333',
+  'e3333333-3333-3333-3333-333333333333',
   'c3333333-3333-3333-3333-333333333333',
   'Restricted Medical Record: Severe IgE-mediated anaphylaxis history. Authorized for emergency epinephrine auto-injector administration.',
   array['EpiPen 0.3mg Auto-Injector', 'Cetirizine 10mg'],

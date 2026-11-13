@@ -53,7 +53,7 @@ export const SEED_PROFILES: Profile[] = [
 // 2. SEED RESTRICTED MEDICAL RECORDS (Confidential - stored separately)
 export const SEED_MEDICAL_RECORDS: MedicalRecord[] = [
   {
-    id: 'm1111111-1111-1111-1111-111111111111',
+    id: 'e1111111-1111-1111-1111-111111111111',
     profile_id: 'a1111111-1111-1111-1111-111111111111',
     medical_full: 'Restricted Medical Record: Prior orthopedic surgery (right collarbone, 2022). Asthmatic attacks triggered by severe dust or smoke inhalation. Inhaler dosage: Salbutamol 100mcg.',
     medications: ['Salbutamol 100mcg', 'Montelukast 10mg'],
@@ -61,7 +61,7 @@ export const SEED_MEDICAL_RECORDS: MedicalRecord[] = [
     updated_at: new Date(Date.now() - 86400000 * 30).toISOString(),
   },
   {
-    id: 'm2222222-2222-2222-2222-222222222222',
+    id: 'e2222222-2222-2222-2222-222222222222',
     profile_id: 'b2222222-2222-2222-2222-222222222222',
     medical_full: 'Restricted Medical Record: Daily medication: Metformin 500mg, Donepezil 5mg. Prone to hypoglycemic episodes if meals are delayed.',
     medications: ['Metformin 500mg', 'Donepezil 5mg'],
@@ -69,7 +69,7 @@ export const SEED_MEDICAL_RECORDS: MedicalRecord[] = [
     updated_at: new Date(Date.now() - 86400000 * 60).toISOString(),
   },
   {
-    id: 'm3333333-3333-3333-3333-333333333333',
+    id: 'e3333333-3333-3333-3333-333333333333',
     profile_id: 'c3333333-3333-3333-3333-333333333333',
     medical_full: 'Restricted Medical Record: Severe IgE-mediated anaphylaxis history. Authorized for emergency epinephrine auto-injector administration.',
     medications: ['EpiPen 0.3mg Auto-Injector', 'Cetirizine 10mg'],
