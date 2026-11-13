@@ -1,0 +1,73 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #FEF9EC;
+  --foreground: #1C1917;
+  --primary-brand: #EE9C18;
+  --primary-hover: #D6880D;
+  --primary-tint: #FDF2D6;
+  --deep-dark: #1C1917;
+  --fresh-green: #20A464;
+  --soft-mint: #E8F7EF;
+  --emergency-red: #E5484D;
+  --warning-amber: #EE9C18;
+  --main-text: #1C1917;
+  --secondary-text: #78716C;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--main-text);
+  font-family: 'Inter', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Tactile Leaflet Container */
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+  border-radius: 1rem;
+  z-index: 10 !important;
+}
+
+/* Emergency GPS pin pulse */
+.emergency-pin-pulse {
+  position: relative;
+  width: 26px;
+  height: 26px;
+  background-color: #E5484D;
+  border: 3px solid #FFFFFF;
+  border-radius: 50%;
+  box-shadow: 0 0 16px rgba(229, 72, 77, 0.65);
+}
+
+.emergency-pin-pulse::after {
+  content: '';
+  position: absolute;
+  top: -8px;
+  left: -8px;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: rgba(229, 72, 77, 0.35);
+  animation: sonar-ping 2s cubic-bezier(0, 0.2, 0.8, 1) infinite;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #EADFC7;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #D6C5A2;
+}
