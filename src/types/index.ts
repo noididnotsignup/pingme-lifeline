@@ -10,8 +10,9 @@ export type RoleType = 'helper' | 'owner' | 'family' | 'rescuer' | 'official';
 
 export type PersonHealthStatus = 'safe' | 'injured' | 'admitted';
 
+// Public Basic Profile (Never contains restricted medical records)
 export interface Profile {
-  id: string;
+  id: string; // UUID
   name: string;
   photo_url: string;
   blood_group: BloodGroup;
@@ -19,14 +20,26 @@ export interface Profile {
   conditions: string[];
   language: string;
   emergency_notes?: string;
-  medical_full?: string; // Restricted to doctors/paramedics
+  medical_full?: string; // Only present when unlocked via authorized official verification
   created_at: string;
+  updated_at?: string;
+}
+
+// Restricted Clinical Record (Hospitals & Paramedics Only)
+export interface MedicalRecord {
+  id: string; // UUID
+  profile_id: string; // UUID references Profile
+  medical_full: string;
+  medications?: string[];
+  doctor_notes?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface Tag {
-  id: string;
+  id: string; // UUID
   code: string; // e.g. LIFE-9021
-  profile_id: string;
+  profile_id: string; // UUID references Profile
   type: TagType;
   label?: string;
   active: boolean;
@@ -34,8 +47,8 @@ export interface Tag {
 }
 
 export interface FamilyMember {
-  id: string;
-  profile_id: string;
+  id: string; // UUID
+  profile_id: string; // UUID references Profile
   name: string;
   relation: string;
   phone_masked: string; // E.g. "+91 98*** **412" (Never raw phone)
@@ -43,8 +56,9 @@ export interface FamilyMember {
 }
 
 export interface Incident {
-  id: string;
-  tag_id: string;
+  id: string; // UUID primary key
+  reference_code?: string; // e.g. "INC-9021" for display
+  tag_id: string; // UUID references Tag
   situation: SituationType;
   status: IncidentStatus;
   lat: number;
@@ -68,30 +82,40 @@ export interface NearbyHospital {
   address?: string;
   phone_masked?: string;
   emergency_beds?: number;
+  source?: 'openstreetmap' | 'emergency_directory';
 }
 
 export interface Camp {
-  id: string;
+  id: string; // UUID
   name: string;
   lat: number;
   lng: number;
   capacity: number;
   current_count: number;
   location_desc?: string;
+  created_at?: string;
 }
 
 export interface CampPersonRecord {
-  id: string;
+  id: string; // UUID
+  camp_id: string; // UUID references Camp
+  camp_name: string;
+  tag_code: string;
   person_name: string;
   photo_url: string;
-  tag_code: string;
   blood_group: BloodGroup;
-  camp_name: string;
-  camp_id: string;
   status: PersonHealthStatus;
   time_scanned: string;
   last_update: string;
   notes?: string;
+}
+
+export interface UserRole {
+  user_id: string;
+  role: RoleType;
+  agency?: string;
+  badge_number?: string;
+  verified: boolean;
 }
 
 export interface OfficialAuditLog {

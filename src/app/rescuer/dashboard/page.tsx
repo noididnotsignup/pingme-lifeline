@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { CampPersonRecord, Camp, PersonHealthStatus, Tag, Profile } from '@/types';
 import {
   getCampRecords,
+  getCamps,
   addRescuerScanRecord,
   getTagByCode,
   getProfileById,
@@ -30,7 +31,7 @@ import {
 export default function RescuerDashboardPage() {
   const [activeTab, setActiveTab] = useState<'overview' | 'scan' | 'camps' | 'records'>('overview');
   const [campRecords, setCampRecords] = useState<CampPersonRecord[]>([]);
-  const [camps] = useState<Camp[]>(SEED_CAMPS);
+  const [camps, setCamps] = useState<Camp[]>(SEED_CAMPS);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
@@ -43,7 +44,15 @@ export default function RescuerDashboardPage() {
   const [scanSavedMsg, setScanSavedMsg] = useState(false);
 
   useEffect(() => {
-    setCampRecords(getCampRecords());
+    async function init() {
+      const liveCamps = await getCamps();
+      setCamps(liveCamps);
+      if (liveCamps.length > 0) {
+        setSelectedCampId(liveCamps[0].id);
+      }
+      setCampRecords(getCampRecords());
+    }
+    init();
   }, []);
 
   const handleLookupTag = async (code: string) => {

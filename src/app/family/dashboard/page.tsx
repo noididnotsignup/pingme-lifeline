@@ -7,6 +7,7 @@ import {
   getAllIncidents,
   getProfileById,
   getTagByCode,
+  getTagsForProfile,
   updateIncidentStatus,
   subscribeToAllIncidents,
   getCampRecords,
@@ -38,17 +39,19 @@ export default function FamilyDashboard() {
   const [selectedProfileId, setSelectedProfileId] = useState<string>(SEED_PROFILES[0].id);
   const [campRecords, setCampRecords] = useState<CampPersonRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [profileTags, setProfileTags] = useState<Tag[]>([]);
 
   const activeProfile = SEED_PROFILES.find((p) => p.id === selectedProfileId) || SEED_PROFILES[0];
   const activeFamily = SEED_FAMILY.filter((f) => f.profile_id === activeProfile.id);
-  const activeTag = SEED_TAGS.find((t) => t.profile_id === activeProfile.id) || SEED_TAGS[0];
+  const activeTag = profileTags[0] || SEED_TAGS.find((t) => t.profile_id === activeProfile.id) || SEED_TAGS[0];
 
+  const profileTagIds = profileTags.map((t) => t.id);
   const activeIncidentsForProfile = incidents.filter(
-    (inc) => inc.tag_id === activeTag.id && inc.status !== 'resolved'
+    (inc) => (inc.tag_id === activeTag.id || profileTagIds.includes(inc.tag_id)) && inc.status !== 'resolved'
   );
   const activeIncident = activeIncidentsForProfile[0] || null;
   const pastIncidents = incidents.filter(
-    (inc) => inc.tag_id === activeTag.id && inc.status === 'resolved'
+    (inc) => (inc.tag_id === activeTag.id || profileTagIds.includes(inc.tag_id)) && inc.status === 'resolved'
   );
 
   useEffect(() => {
@@ -58,6 +61,8 @@ export default function FamilyDashboard() {
         const list = await getAllIncidents();
         setIncidents(list);
         setCampRecords(getCampRecords());
+        const tags = await getTagsForProfile(selectedProfileId);
+        setProfileTags(tags);
       } finally {
         setLoading(false);
       }
@@ -72,7 +77,7 @@ export default function FamilyDashboard() {
     return () => {
       unsubscribe();
     };
-  }, []);
+  }, [selectedProfileId]);
 
   const handleUpdateStatus = async (
     incidentId: string,

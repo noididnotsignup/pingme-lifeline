@@ -56,8 +56,15 @@ export function HelperDistressModal({
           setLocationName(`GPS Fixed (±${Math.round(pos.coords.accuracy)}m accuracy)`);
         },
         (err) => {
-          console.warn('Geolocation denied or fallback used:', err);
+          console.warn('Geolocation denied or unavailable:', err);
           setGpsStatus('fallback');
+          if (err.code === err.PERMISSION_DENIED) {
+            setLocationName('Default Incident Coordinate (Location permission denied)');
+          } else if (err.code === err.TIMEOUT) {
+            setLocationName('Default Incident Coordinate (GPS acquisition timed out)');
+          } else {
+            setLocationName('Default Incident Coordinate (Location unavailable)');
+          }
         },
         { enableHighAccuracy: true, timeout: 6000 }
       );

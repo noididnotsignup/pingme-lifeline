@@ -21,36 +21,36 @@ const FALLBACK_HOSPITALS: Omit<NearbyHospital, 'distanceKm'>[] = [
     name: 'Apex Trauma & Emergency Center',
     lat: 28.5672,
     lng: 77.2100,
-    address: 'Ring Road, Trauma Care Annex',
+    address: 'Ring Road, Trauma Care Annex, New Delhi',
     phone_masked: '108 (Emergency Dispatch)',
-    emergency_beds: 34,
+    source: 'emergency_directory',
   },
   {
     id: 'hosp-2',
     name: 'Apollo Lifeline Multi-Specialty Hospital',
     lat: 28.5411,
     lng: 77.2831,
-    address: 'Sarita Vihar, Mathura Road',
+    address: 'Sarita Vihar, Mathura Road, New Delhi',
     phone_masked: '+91 11 26** **00',
-    emergency_beds: 18,
+    source: 'emergency_directory',
   },
   {
     id: 'hosp-3',
     name: 'Max Super Speciality Emergency Wing',
     lat: 28.5284,
     lng: 77.2119,
-    address: '1, 2, Press Enclave Marg, Saket',
+    address: '1, 2, Press Enclave Marg, Saket, New Delhi',
     phone_masked: '+91 11 40** **55',
-    emergency_beds: 22,
+    source: 'emergency_directory',
   },
   {
     id: 'hosp-4',
     name: 'Fortis Escorts Emergency Center',
     lat: 28.5603,
     lng: 77.2763,
-    address: 'Okhla Road, New Friends Colony',
+    address: 'Okhla Road, New Friends Colony, New Delhi',
     phone_masked: '+91 11 47** **00',
-    emergency_beds: 15,
+    source: 'emergency_directory',
   },
 ];
 
@@ -60,7 +60,7 @@ export async function fetchNearbyHospitals(lat: number, lng: number): Promise<Ne
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 3500);
 
-    // 5km radius query for hospitals and clinics
+    // 5km radius query for hospitals and trauma centers
     const query = `
       [out:json][timeout:3];
       (
@@ -82,17 +82,21 @@ export async function fetchNearbyHospitals(lat: number, lng: number): Promise<Ne
           .map((el: any) => {
             const hLat = el.lat || el.center?.lat || lat;
             const hLng = el.lon || el.center?.lon || lng;
-            const name = el.tags?.name || 'Emergency Medical Center';
+            const name = el.tags?.name || 'Emergency Medical Facility';
             const dist = calculateDistanceKm(lat, lng, hLat, hLng);
+            const rawBeds = el.tags?.['beds'];
+            const parsedBeds = rawBeds ? parseInt(rawBeds, 10) : undefined;
+
             return {
               id: `overpass-${el.id}`,
               name,
               distanceKm: dist,
               lat: hLat,
               lng: hLng,
-              address: el.tags?.['addr:street'] || 'Emergency Medical Node',
-              phone_masked: '108 / Direct Ambulance',
-              emergency_beds: Math.floor(Math.random() * 20) + 10,
+              address: el.tags?.['addr:street'] ? `${el.tags['addr:street']}, ${el.tags['addr:city'] || ''}` : 'Emergency Node (OSM Verified)',
+              phone_masked: el.tags?.phone ? el.tags.phone.slice(0, 5) + '***' : '108 (Dispatched via Ambulance)',
+              emergency_beds: !isNaN(Number(parsedBeds)) ? parsedBeds : undefined,
+              source: 'openstreetmap' as const,
             };
           })
           .sort((a: NearbyHospital, b: NearbyHospital) => a.distanceKm - b.distanceKm);
@@ -101,10 +105,10 @@ export async function fetchNearbyHospitals(lat: number, lng: number): Promise<Ne
       }
     }
   } catch {
-    // Graceful fallback to pre-computed emergency centers
+    // Graceful fallback to verified emergency centers when network or Overpass is unavailable
   }
 
-  // Calculate distances relative to user's current pin
+  // Calculate distances relative to user's current pin from emergency directory
   return FALLBACK_HOSPITALS.map((h) => ({
     ...h,
     distanceKm: calculateDistanceKm(lat, lng, h.lat, h.lng),

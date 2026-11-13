@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Image from 'next/image';
 import { Profile, Tag } from '@/types';
-import { ShieldCheck, AlertTriangle, Activity, Globe, Lock, Stethoscope, ChevronDown, ChevronUp } from 'lucide-react';
+import { ShieldCheck, AlertTriangle, Activity, Globe, Lock, Stethoscope, ChevronDown, ChevronUp, Loader2, Pill } from 'lucide-react';
 
 interface MedicalStampProps {
   profile: Profile;
@@ -14,16 +14,52 @@ export function MedicalStamp({ profile, tag }: MedicalStampProps) {
   const [unlocked, setUnlocked] = useState(false);
   const [passcode, setPasscode] = useState('');
   const [showDoctorLogin, setShowDoctorLogin] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [clinicalRecord, setClinicalRecord] = useState<{
+    medical_full: string;
+    medications?: string[];
+    doctor_notes?: string;
+  } | null>(null);
 
-  const handleUnlock = (e: React.FormEvent) => {
+  const handleUnlock = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (passcode.toUpperCase().trim() === 'HOSP-1234') {
-      setUnlocked(true);
-      setErrorMsg('');
-      setShowDoctorLogin(false);
-    } else {
-      setErrorMsg('Invalid Doctor / Paramedic authorization code. Try HOSP-1234.');
+    if (!passcode.trim()) {
+      setErrorMsg('Please enter an official authorization code.');
+      return;
+    }
+
+    setLoading(true);
+    setErrorMsg('');
+
+    try {
+      const res = await fetch('/api/official/medical-record', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          profileId: profile.id,
+          tagCode: tag.code,
+          passkey: passcode.trim(),
+          officerName: 'Trauma Duty Physician',
+          badgeNumber: 'MED-TRIAGE-DIR',
+          agencyStation: 'Emergency Department',
+          reason: 'Emergency bystander triage bedside consultation',
+        }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        setClinicalRecord(data);
+        setUnlocked(true);
+        setShowDoctorLogin(false);
+      } else {
+        setErrorMsg(data.error || 'Authorization failed. Verify your hospital credential.');
+      }
+    } catch {
+      setErrorMsg('Network error connecting to authorization server.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -63,7 +99,7 @@ export function MedicalStamp({ profile, tag }: MedicalStampProps) {
       {/* Main Profile & Blood Group Section */}
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-4">
-          {/* Avatar with fallback */}
+          {/* Avatar */}
           <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden bg-slate-100 border-2 border-white shadow-card flex-shrink-0">
             <Image
               src={profile.photo_url}
@@ -152,7 +188,7 @@ export function MedicalStamp({ profile, tag }: MedicalStampProps) {
         </div>
       </div>
 
-      {/* TIERED ACCESS: Doctor / Paramedic Confidential Medical Record */}
+      {/* TIERED ACCESS: Doctor / Paramedic Server-Verified Medical Record */}
       <div className="mt-4 pt-4 border-t border-brand-border">
         {!unlocked ? (
           <div>
@@ -170,21 +206,23 @@ export function MedicalStamp({ profile, tag }: MedicalStampProps) {
             {showDoctorLogin && (
               <form onSubmit={handleUnlock} className="mt-2 p-3.5 bg-brand-bg rounded-2xl border border-brand-border animate-in fade-in duration-150">
                 <div className="text-[11px] text-text-secondary mb-2">
-                  Enter authorized Hospital / Paramedic PIN (Demo PIN: <strong className="text-brand-navy font-mono">HOSP-1234</strong>)
+                  Enter authorized Hospital / Paramedic Passcode (Demo Passcode: <strong className="text-brand-navy font-mono">HOSP-1234</strong>)
                 </div>
                 <div className="flex gap-2">
                   <input
-                    type="text"
+                    type="password"
                     value={passcode}
                     onChange={(e) => setPasscode(e.target.value)}
-                    placeholder="e.g. HOSP-1234"
+                    placeholder="Enter passcode (e.g. HOSP-1234)"
                     className="flex-1 px-3 py-2 rounded-xl border border-brand-border bg-white text-xs font-mono font-bold focus:outline-none focus:ring-2 focus:ring-brand-primary"
                   />
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-brand-primary hover:bg-brand-dark text-brand-navy rounded-xl text-xs font-black transition-colors shadow-subtle"
+                    disabled={loading}
+                    className="px-4 py-2 bg-brand-primary hover:bg-brand-dark text-brand-navy rounded-xl text-xs font-black transition-colors shadow-subtle flex items-center gap-1.5"
                   >
-                    Unlock
+                    {loading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                    <span>Unlock</span>
                   </button>
                 </div>
                 {errorMsg && <p className="mt-1.5 text-[11px] text-emergency-red font-medium">{errorMsg}</p>}
@@ -192,19 +230,36 @@ export function MedicalStamp({ profile, tag }: MedicalStampProps) {
             )}
           </div>
         ) : (
-          <div className="p-3.5 rounded-2xl bg-fresh-mint border border-fresh-green/30 animate-in fade-in">
-            <div className="flex items-center justify-between text-xs font-bold text-fresh-green mb-1.5">
+          <div className="p-4 rounded-2xl bg-fresh-mint border border-fresh-green/30 animate-in fade-in space-y-2.5">
+            <div className="flex items-center justify-between text-xs font-bold text-fresh-green">
               <span className="flex items-center gap-1.5">
                 <Stethoscope className="w-4 h-4" />
                 <span>Clinical History Unlocked (Authorized Medical View)</span>
               </span>
               <span className="text-[10px] font-mono px-2 py-0.5 bg-white rounded-full border border-fresh-green/30">
-                AUTH: HOSP-1234
+                AUDIT LOGGED
               </span>
             </div>
+
             <p className="text-xs text-brand-navy font-medium leading-relaxed">
-              {profile.medical_full}
+              {clinicalRecord?.medical_full}
             </p>
+
+            {clinicalRecord?.medications && clinicalRecord.medications.length > 0 && (
+              <div className="pt-2 border-t border-fresh-green/20">
+                <div className="flex items-center gap-1.5 text-[11px] font-bold text-fresh-green mb-1">
+                  <Pill className="w-3.5 h-3.5" />
+                  <span>Prescribed Medications:</span>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {clinicalRecord.medications.map((med, i) => (
+                    <span key={i} className="px-2 py-0.5 rounded-md bg-white text-[10px] font-mono font-semibold text-brand-navy border border-fresh-green/30">
+                      {med}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
