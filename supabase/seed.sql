@@ -1,10 +1,50 @@
+-- =============================================================================
 -- PingME Lifeline — Seed Data (Synthetic Test Profiles, Tags, and Camps)
--- Idempotent: Can be safely re-run without duplicate key errors
+-- Safe & Idempotent: Can be re-run at any time without duplicate key errors
+-- =============================================================================
 
--- Truncate existing seed tables
-truncate table public.scan_logs, public.camp_scans, public.incidents, public.family_members, public.tags, public.medical_records, public.profiles, public.camps, public.user_roles cascade;
+-- Clear existing data safely
+delete from public.scan_logs;
+delete from public.camp_scans;
+delete from public.incidents;
+delete from public.family_members;
+delete from public.tags;
+delete from public.medical_records;
+delete from public.profiles;
+delete from public.camps;
+delete from public.user_roles;
 
--- 1. PROFILES (Basic Public Emergency Vitals Only)
+-- 1. RELIEF CAMPS (Consistent UUIDs)
+insert into public.camps (id, name, lat, lng, capacity, current_count, location_desc) values
+(
+  '77777777-1111-1111-1111-111111111111',
+  'Camp A — Civil Lines Red Cross Center',
+  28.6750,
+  77.2250,
+  450,
+  84,
+  'North Sector Disaster Coordination Zone'
+),
+(
+  '88888888-2222-2222-2222-222222222222',
+  'Camp B — Jawaharlal Nehru Stadium Shelter',
+  28.5830,
+  77.2340,
+  600,
+  142,
+  'South Sector Emergency Evacuation Pavilion'
+),
+(
+  '99999999-3333-3333-3333-333333333333',
+  'Camp C — Metro Triage & Aid Annex',
+  28.6280,
+  77.2180,
+  300,
+  51,
+  'Central Transit Medical Triage Post'
+);
+
+-- 2. PROFILES (Basic Public Emergency Vitals Only)
 insert into public.profiles (id, name, photo_url, blood_group, allergies, conditions, language, emergency_notes) values
 (
   'a1111111-1111-1111-1111-111111111111',
@@ -37,7 +77,7 @@ insert into public.profiles (id, name, photo_url, blood_group, allergies, condit
   'Severe allergy! Requires Epipen immediately if swollen or wheezing.'
 );
 
--- 2. RESTRICTED MEDICAL RECORDS (Confidential - Unlocked by Verified Hospital/Paramedics)
+-- 3. RESTRICTED MEDICAL RECORDS (Confidential - Unlocked by Verified Hospital/Paramedics)
 insert into public.medical_records (id, profile_id, medical_full, medications, doctor_notes) values
 (
   'm1111111-1111-1111-1111-111111111111',
@@ -61,7 +101,7 @@ insert into public.medical_records (id, profile_id, medical_full, medications, d
   'Dr. S. Mehta, Pediatric Allergy Specialist'
 );
 
--- 3. TAGS
+-- 4. TAGS
 insert into public.tags (id, code, profile_id, type, label, active) values
 (
   'd4444444-4444-4444-4444-444444444444',
@@ -96,7 +136,7 @@ insert into public.tags (id, code, profile_id, type, label, active) values
   true
 );
 
--- 4. FAMILY MEMBERS (Masked phone details)
+-- 5. FAMILY MEMBERS (Masked phone details)
 insert into public.family_members (id, profile_id, name, relation, phone_masked) values
 (
   '11111111-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
@@ -125,36 +165,6 @@ insert into public.family_members (id, profile_id, name, relation, phone_masked)
   'Kavita Patel',
   'Mother',
   '+91 99*** **154'
-);
-
--- 5. RELIEF CAMPS (Consistent UUIDs)
-insert into public.camps (id, name, lat, lng, capacity, current_count, location_desc) values
-(
-  '77777777-1111-1111-1111-111111111111',
-  'Camp A — Civil Lines Red Cross Center',
-  28.6750,
-  77.2250,
-  450,
-  84,
-  'North Sector Disaster Coordination Zone'
-),
-(
-  '88888888-2222-2222-2222-222222222222',
-  'Camp B — Jawaharlal Nehru Stadium Shelter',
-  28.5830,
-  77.2340,
-  600,
-  142,
-  'South Sector Emergency Evacuation Pavilion'
-),
-(
-  '99999999-3333-3333-3333-333333333333',
-  'Camp C — Metro Triage & Aid Annex',
-  28.6280,
-  77.2180,
-  300,
-  51,
-  'Central Transit Medical Triage Post'
 );
 
 -- 6. CAMP SCANS (Crisis Ledger)
