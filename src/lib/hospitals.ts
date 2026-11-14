@@ -54,61 +54,71 @@ const FALLBACK_HOSPITALS: Omit<NearbyHospital, 'distanceKm'>[] = [
   },
 ];
 
-export async function fetchNearbyHospitals(lat: number, lng: number): Promise<NearbyHospital[]> {
-  // Attempt Overpass API with a strict 3.5s timeout
+async function queryOverpassEndpoint(url: string, query: string, timeoutMs: number): Promise<any | null> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3500);
-
-    // 5km radius query for hospitals and trauma centers
-    const query = `
-      [out:json][timeout:3];
-      (
-        node["amenity"="hospital"](around:5000,${lat},${lng});
-        way["amenity"="hospital"](around:5000,${lat},${lng});
-      );
-      out center 5;
-    `;
-
-    const res = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`, {
+    const res = await fetch(`${url}?data=${encodeURIComponent(query)}`, {
       signal: controller.signal,
     });
-    clearTimeout(timeoutId);
-
     if (res.ok) {
-      const data = await res.json();
-      if (data && data.elements && data.elements.length > 0) {
-        const results: NearbyHospital[] = data.elements
-          .map((el: any) => {
-            const hLat = el.lat || el.center?.lat || lat;
-            const hLng = el.lon || el.center?.lon || lng;
-            const name = el.tags?.name || 'Emergency Medical Facility';
-            const dist = calculateDistanceKm(lat, lng, hLat, hLng);
-            const rawBeds = el.tags?.['beds'];
-            const parsedBeds = rawBeds ? parseInt(rawBeds, 10) : undefined;
-
-            return {
-              id: `overpass-${el.id}`,
-              name,
-              distanceKm: dist,
-              lat: hLat,
-              lng: hLng,
-              address: el.tags?.['addr:street'] ? `${el.tags['addr:street']}, ${el.tags['addr:city'] || ''}` : 'Emergency Node (OSM Verified)',
-              phone_masked: el.tags?.phone ? el.tags.phone.slice(0, 5) + '***' : '108 (Dispatched via Ambulance)',
-              emergency_beds: !isNaN(Number(parsedBeds)) ? parsedBeds : undefined,
-              source: 'openstreetmap' as const,
-            };
-          })
-          .sort((a: NearbyHospital, b: NearbyHospital) => a.distanceKm - b.distanceKm);
-
-        if (results.length > 0) return results.slice(0, 5);
-      }
+      return await res.json();
     }
+    return null;
   } catch {
-    // Graceful fallback to verified emergency centers when network or Overpass is unavailable
+    return null;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+export async function fetchNearbyHospitals(lat: number, lng: number): Promise<NearbyHospital[]> {
+  // 5km radius query for hospitals and trauma centers on OpenStreetMap
+  const query = `
+    [out:json][timeout:3];
+    (
+      node["amenity"="hospital"](around:5000,${lat},${lng});
+      way["amenity"="hospital"](around:5000,${lat},${lng});
+    );
+    out center 6;
+  `;
+
+  // Try primary Overpass API server
+  let data = await queryOverpassEndpoint('https://overpass-api.de/api/interpreter', query, 3500);
+
+  // If primary fails or times out, try secondary community mirror
+  if (!data || !data.elements || data.elements.length === 0) {
+    data = await queryOverpassEndpoint('https://overpass.kumi.systems/api/interpreter', query, 3500);
   }
 
-  // Calculate distances relative to user's current pin from emergency directory
+  if (data && data.elements && data.elements.length > 0) {
+    const results: NearbyHospital[] = data.elements
+      .map((el: any) => {
+        const hLat = el.lat || el.center?.lat || lat;
+        const hLng = el.lon || el.center?.lon || lng;
+        const name = el.tags?.name || 'Emergency Medical Facility';
+        const dist = calculateDistanceKm(lat, lng, hLat, hLng);
+        const rawBeds = el.tags?.['beds'];
+        const parsedBeds = rawBeds ? parseInt(rawBeds, 10) : undefined;
+
+        return {
+          id: `overpass-${el.id}`,
+          name,
+          distanceKm: dist,
+          lat: hLat,
+          lng: hLng,
+          address: el.tags?.['addr:street'] ? `${el.tags['addr:street']}, ${el.tags['addr:city'] || ''}` : 'Emergency Node (OSM Verified)',
+          phone_masked: el.tags?.phone ? el.tags.phone.slice(0, 5) + '***' : '108 (Dispatched via Ambulance)',
+          emergency_beds: !isNaN(Number(parsedBeds)) ? parsedBeds : undefined,
+          source: 'openstreetmap' as const,
+        };
+      })
+      .sort((a: NearbyHospital, b: NearbyHospital) => a.distanceKm - b.distanceKm);
+
+    if (results.length > 0) return results.slice(0, 5);
+  }
+
+  // Graceful fallback to verified emergency centers when network or Overpass is unavailable
   return FALLBACK_HOSPITALS.map((h) => ({
     ...h,
     distanceKm: calculateDistanceKm(lat, lng, h.lat, h.lng),

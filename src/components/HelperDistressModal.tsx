@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { SituationType } from '@/types';
-import { X, MapPin, Send, AlertTriangle, Stethoscope, Compass, CheckCircle2, Loader2 } from 'lucide-react';
+import { X, MapPin, Send, AlertTriangle, Stethoscope, Compass, CheckCircle2, Loader2, Navigation, Edit3, RotateCw } from 'lucide-react';
 
 interface HelperDistressModalProps {
   tagId: string;
@@ -27,12 +27,22 @@ export function HelperDistressModal({
   const [situation, setSituation] = useState<SituationType>('accident');
   const [note, setNote] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [gpsStatus, setGpsStatus] = useState<'acquiring' | 'locked' | 'fallback'>('acquiring');
+  const [gpsStatus, setGpsStatus] = useState<'acquiring' | 'locked' | 'denied' | 'fallback'>('acquiring');
   const [coords, setCoords] = useState<{ lat: number; lng: number }>({
     lat: 28.6139,
     lng: 77.2090, // Central Delhi default
   });
   const [locationName, setLocationName] = useState('Central New Delhi (Connaught Place corridor)');
+  const [showManualLocation, setShowManualLocation] = useState(false);
+  const [manualAddress, setManualAddress] = useState('');
+
+  // Landmark presets for quick selection if GPS is denied
+  const landmarkPresets = [
+    { name: 'Connaught Place Outer Circle, New Delhi', lat: 28.6315, lng: 77.2167 },
+    { name: 'Apex Trauma Emergency Ward / Ring Road', lat: 28.5672, lng: 77.2100 },
+    { name: 'South Extension II Metro Station, New Delhi', lat: 28.5724, lng: 77.2215 },
+    { name: 'Civil Lines Red Cross Triage Annex, Delhi', lat: 28.6750, lng: 77.2250 },
+  ];
 
   // Quick note suggestions
   const quickNotes = [
@@ -43,8 +53,8 @@ export function HelperDistressModal({
     'Cannot stand up',
   ];
 
-  // Try acquiring real browser GPS coordinates
-  useEffect(() => {
+  const requestGps = () => {
+    setGpsStatus('acquiring');
     if (typeof window !== 'undefined' && 'geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
@@ -53,25 +63,42 @@ export function HelperDistressModal({
             lng: pos.coords.longitude,
           });
           setGpsStatus('locked');
-          setLocationName(`GPS Fixed (±${Math.round(pos.coords.accuracy)}m accuracy)`);
+          setLocationName(`Helper Live GPS Fixed (±${Math.round(pos.coords.accuracy)}m)`);
         },
         (err) => {
-          console.warn('Geolocation denied or unavailable:', err);
-          setGpsStatus('fallback');
+          console.warn('Geolocation error:', err);
           if (err.code === err.PERMISSION_DENIED) {
-            setLocationName('Default Incident Coordinate (Location permission denied)');
-          } else if (err.code === err.TIMEOUT) {
-            setLocationName('Default Incident Coordinate (GPS acquisition timed out)');
+            setGpsStatus('denied');
+            setLocationName('GPS Permission Denied — Please select location below');
           } else {
-            setLocationName('Default Incident Coordinate (Location unavailable)');
+            setGpsStatus('fallback');
+            setLocationName('GPS Acquisition Timed Out — Approximate coordinate used');
           }
         },
         { enableHighAccuracy: true, timeout: 6000 }
       );
     } else {
       setGpsStatus('fallback');
+      setLocationName('Geolocation not supported by browser — Manual entry active');
     }
+  };
+
+  useEffect(() => {
+    requestGps();
   }, []);
+
+  const handleSelectPreset = (preset: typeof landmarkPresets[0]) => {
+    setCoords({ lat: preset.lat, lng: preset.lng });
+    setLocationName(`Manual Selection: ${preset.name}`);
+    setShowManualLocation(false);
+  };
+
+  const handleCustomAddressSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!manualAddress.trim()) return;
+    setLocationName(`Helper Landmark: ${manualAddress.trim()}`);
+    setShowManualLocation(false);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -124,7 +151,7 @@ export function HelperDistressModal({
               Alert {personName}&apos;s Family
             </h2>
             <p className="text-xs text-text-secondary">
-              Tag: <span className="font-mono font-semibold text-brand-navy">{tagCode}</span> • Anonymous helper report
+              Tag: <span className="font-mono font-semibold text-brand-navy">{tagCode}</span> • Anonymous bystander report
             </p>
           </div>
           <button
@@ -171,26 +198,49 @@ export function HelperDistressModal({
             </div>
           </div>
 
-          {/* 2. Location Sharing via Geolocation API */}
+          {/* 2. Location Sharing via Geolocation API with Manual Fallback */}
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-text-secondary mb-2">
-              2. Share Your Location (Transmitted to Family)
-            </label>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-xs font-bold uppercase tracking-wider text-text-secondary">
+                2. Transmit Incident Location
+              </label>
+              <button
+                type="button"
+                onClick={() => setShowManualLocation(!showManualLocation)}
+                className="text-[11px] font-bold text-brand-dark hover:underline flex items-center gap-1"
+              >
+                <Edit3 className="w-3 h-3 text-brand-primary" />
+                <span>{showManualLocation ? 'Hide Manual Entry' : 'Manual Location Override'}</span>
+              </button>
+            </div>
+
             <div className="p-3 bg-brand-bg rounded-2xl border border-brand-border flex items-start gap-3">
               <div className="w-8 h-8 rounded-xl bg-fresh-mint text-fresh-green flex items-center justify-center flex-shrink-0 mt-0.5">
                 <MapPin className="w-4 h-4" />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between gap-1">
-                  <span className="text-xs font-bold text-brand-navy">
+                <div className="flex items-center justify-between gap-1 flex-wrap">
+                  <span className="text-xs font-bold text-brand-navy truncate">
                     {locationName}
                   </span>
-                  {gpsStatus === 'locked' ? (
+                  {gpsStatus === 'locked' && (
                     <span className="text-[10px] text-fresh-green font-semibold flex items-center gap-1">
                       <CheckCircle2 className="w-3 h-3" /> GPS Acquired
                     </span>
-                  ) : (
-                    <span className="text-[10px] text-brand-primary font-bold">Demo GPS</span>
+                  )}
+                  {gpsStatus === 'acquiring' && (
+                    <span className="text-[10px] text-brand-primary font-bold flex items-center gap-1">
+                      <Loader2 className="w-3 h-3 animate-spin" /> Acquiring GPS...
+                    </span>
+                  )}
+                  {(gpsStatus === 'denied' || gpsStatus === 'fallback') && (
+                    <button
+                      type="button"
+                      onClick={requestGps}
+                      className="text-[10px] text-emergency-red font-bold flex items-center gap-1 hover:underline"
+                    >
+                      <RotateCw className="w-3 h-3" /> Retry GPS
+                    </button>
                   )}
                 </div>
                 <div className="text-[11px] font-mono text-text-secondary mt-0.5">
@@ -198,6 +248,44 @@ export function HelperDistressModal({
                 </div>
               </div>
             </div>
+
+            {/* Manual Location Override Drawer */}
+            {showManualLocation && (
+              <div className="mt-2.5 p-3.5 bg-white rounded-2xl border border-brand-primary/40 shadow-card space-y-3 animate-in fade-in">
+                <div className="text-[11px] font-bold text-brand-navy">
+                  Select a Landmark or Type Your Location:
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                  {landmarkPresets.map((p, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => handleSelectPreset(p)}
+                      className="p-2 text-left text-[11px] rounded-xl bg-brand-bg hover:bg-brand-tint border border-brand-border transition-colors font-medium text-brand-navy"
+                    >
+                      📍 {p.name.split(',')[0]}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="flex gap-2 pt-1">
+                  <input
+                    type="text"
+                    value={manualAddress}
+                    onChange={(e) => setManualAddress(e.target.value)}
+                    placeholder="e.g. Near Metro Pillar 142, Saket"
+                    className="flex-1 px-3 py-1.5 text-xs rounded-xl border border-brand-border bg-white text-brand-navy focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleCustomAddressSubmit}
+                    className="px-3 py-1.5 bg-brand-primary text-brand-navy text-xs font-bold rounded-xl shadow-subtle"
+                  >
+                    Set
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* 3. Optional Helper Note */}
